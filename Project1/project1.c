@@ -51,6 +51,22 @@ void printTape() {
 
 
 int main() {
-    // Coming soon...
+
+    FILE* file;
+    int numStates;
+
+    file = fopen("/Users/jabelalcantara/Desktop/inputFile.txt", "r");
+
+    if (!file) {
+        printf("Could not open file");
+        exit(101);
+    }
+
+    while((fscanf(file, "%d", &numStates)) == 1) {
+        printf("%d ", numStates);
+    }
+
+
+
     return 0;
 }
