@@ -35,29 +35,25 @@ struct Instruction {
     char moveDirection;
     int nextState;
 };
-
 // Function to move the tape head one cell to the left
-void moveLeft(struct Cell** tapeHead) {
-    if (*tapeHead == NULL) {
-        struct Cell *newCell = createCell('B');
-        newCell->next = *tapeHead;
-//        newCell->prev = NULL; // The new cell has no previous cell since it's the leftmost end
-        *tapeHead = newCell;
+struct Cell* moveLeft(struct Cell* tapeHead) {
+    if (tapeHead == NULL) {
+        return NULL;
+    } else if (tapeHead->prev == NULL){
+        return tapeHead;
     } else {
-        *tapeHead = (*tapeHead)->prev; // Update the tape head to the previous cell
+    return tapeHead->prev;
     }
 }
 
 // Function to move the tape head one cell to the right
-void moveRight(struct Cell** tapeHead) {
-    if (*tapeHead == NULL) {
-        struct Cell* newCell = createCell('B');
-        newCell->prev = *tapeHead;
-//        newCell->next = NULL; // The new cell has no next cell since it's the rightmost end
-    // Update the next cell's previous pointer
-        *tapeHead = newCell;
+struct Cell* moveRight(struct Cell* tapeHead) {
+    if (tapeHead == NULL) {
+      return NULL;
+    } else if (tapeHead->next == NULL) {
+        return tapeHead;
     } else {
-        *tapeHead = (*tapeHead)->next; // Update the tape head to the next cell
+    return tapeHead->next;
     }
 }
 
@@ -90,24 +86,21 @@ int main() {
 
     char initialTape[MAX_TAPE_LENGTH];
     fgets(initialTape, sizeof(initialTape), file);
-    initialTape[strlen(initialTape) - 1] = '\0'; // Remove newline character
+// initialTape[strlen(initialTape) - 1] = '\0'; // Remove newline character
 
-    // Initialize the tape with the leftmost cell containing 'A'
+// Initialize the tape with the leftmost cell containing 'A'
     struct Cell* tapeStart = createCell('A');
     struct Cell* head = tapeStart;
-//    int tapeIndex = 0;
 
-//
-//    int tapeIndex = 0;
-
-    // Read and parse the input file
+// Read and parse the input file
     int numStates, startState, endState;
     fscanf(file, "%d", &numStates);
     fscanf(file, "%d", &startState);
     fscanf(file, "%d", &endState);
 
-    // Read and populate the transition table
+// Read and populate the transition table
     struct Instruction transitionTable[MAX_STATES][ASCII_RANGE];
+
     for (int state = 0; state < MAX_STATES; state++) {
         for (int symbol = 0; symbol < ASCII_RANGE; symbol++) {
             transitionTable[state][symbol].writeSymbol = 'B';
@@ -118,14 +111,17 @@ int main() {
 
     char line[100];
     while (fgets(line, sizeof(line), file)) {
+
         int fromState, toState;
         char readVal, writeVal, moveDirection;
 
         if (sscanf(line, "(%d,%c)->(%c,%c,%d)", &fromState, &readVal, &writeVal, &moveDirection, &toState) == EOF) {
-//            if (writeVal == '\0' || moveDirection == '\0' || toState == 0) {
-//                continue;
-//            }
             break;
+        }
+
+// Check if all values are either zero or NULL character
+        if (fromState == 0 && toState == 0 && readVal == '\0' && writeVal == '\0' && moveDirection == '\0') {
+            continue; // Skip this line and continue with the next iteration
         }
 
         transitionTable[fromState][(int)readVal].writeSymbol = writeVal;
@@ -136,7 +132,7 @@ int main() {
     int currentState = startState;
     int tapeIndex = 0;
 
-    // Append initialTape to the tape
+// // Append initialTape to the tape
     while (initialTape[tapeIndex] != '\0') {
         struct Cell* newCell = createCell(initialTape[tapeIndex]);
         head->next = newCell;
@@ -149,47 +145,49 @@ int main() {
     printf("Initial tape contents: ");
     printTape(tapeStart);
 
-
-//    // Append initialTape to the tape
-//    while (initialTape[tapeIndex] != '\0') {
-//        struct Cell* newCell = createCell(initialTape[tapeIndex]);
-//        head->next = newCell;
-//        newCell->prev = head;
-//        head = newCell;
-//        tapeIndex++;
-//    }
-
     while (1) {
+
+//        if (initialTape[tapeIndex] == '\0') {
+//            break;
+//        }
 
         char readSymbol = (head != NULL) ? head->value : 'B';
 
         struct Instruction instruction = transitionTable[currentState][(int)readSymbol];
+
 
         if (head != NULL) {
             head->value = instruction.writeSymbol;
         }
 
         if (instruction.moveDirection == 'L') {
-            moveLeft(&head);
+            head = moveLeft(head);
         } else if (instruction.moveDirection == 'R') {
-            moveRight(&head);
+            head = moveRight(head);
         }
 
         currentState = instruction.nextState;
+        tapeIndex++;
 
         if (currentState == -1) {
             break;
         }
     }
 
-    // Print the final tape content
+    // Find the end of the tape
+    while (tapeStart->prev != NULL) {
+        tapeStart = tapeStart->prev;
+    }
+
+
+// Print the final tape content
     printf("Final tape contents: ");
     printTape(tapeStart);
 
-    // Clean up
+// Clean up
     fclose(file);
 
-    // Clean up tape memory
+// Clean up tape memory
     while (tapeStart != NULL) {
         struct Cell* temp = tapeStart;
         tapeStart = tapeStart->next;
