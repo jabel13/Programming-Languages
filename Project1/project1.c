@@ -6,6 +6,7 @@
 #define MAX_STATES 100
 #define MAX_TAPE_LENGTH 100
 #define ASCII_RANGE 128
+
 // Define the tape cell structure - this tape represents our linked data structure of cells
 struct Cell {
     char value;
@@ -13,113 +14,101 @@ struct Cell {
     struct Cell* prev;
 };
 
+// Instruction structure
+struct Instruction {
+    char writeSymbol;
+    char moveDirection;
+    int nextState;
+};
+
+struct TuringMachine {
+    struct Cell* tape;
+    int startState;
+    int endState;
+    struct Instruction transitions[MAX_STATES][ASCII_RANGE];
+};
+
 // Function to create a new tape cell with the given value as a parameter
 struct Cell* createCell(char value) {
     struct Cell* newCell = (struct Cell*)malloc(sizeof(struct Cell));
-    if (newCell == NULL) {
-        printf("Memory allocation failed. Exiting...\n");
-        exit(1);
-    }
     newCell->value = value;
     newCell->prev = NULL;
     newCell->next = NULL;
     return newCell;
 }
 
-
-//struct Cell *head;
-
-// Define the transition instruction structure
-struct Instruction {
-    char writeSymbol;
-    char moveDirection;
-    int nextState;
-};
 // Function to move the tape head one cell to the left
 struct Cell* moveLeft(struct Cell* tapeHead) {
     if (tapeHead == NULL) {
         return NULL;
-    } else if (tapeHead->prev == NULL){
-        return tapeHead;
-    } else {
-    return tapeHead->prev;
+    } else if (tapeHead->prev == NULL) {
+        struct Cell* newCell = createCell('B'); // Extend the tape with a blank cell
+        tapeHead->prev = newCell;
+        newCell->next = tapeHead;
     }
+    return tapeHead->prev;
 }
 
 // Function to move the tape head one cell to the right
 struct Cell* moveRight(struct Cell* tapeHead) {
     if (tapeHead == NULL) {
-      return NULL;
+        return NULL;
     } else if (tapeHead->next == NULL) {
-        return tapeHead;
-    } else {
-    return tapeHead->next;
+        struct Cell* newCell = createCell('B'); // Extend the tape with a blank cell
+        tapeHead->next = newCell;
+        newCell->prev = tapeHead;
     }
+    return tapeHead->next;
 }
-
 
 // Function to print the content of the tape
 void printTape(struct Cell* tapeHead) {
-    struct Cell* current = tapeHead; // declare and initialize a new pointer 'current' to point to the same cell as 'head'
+    struct Cell* current = tapeHead;
     while (current != NULL) {
-        printf("%c", current->value); // Print the value of the current cell
-        current = current->next; // Move to the next cell
+        printf("%c", current->value);
+        current = current->next;
     }
     printf("\n");
 }
 
-
-int main() {
-
+// fill in values in our instruction table
+void fillTuringMachine (struct TuringMachine* tm, const char* fileName) {
     FILE* file;
-    char fileName[100];
-
-    printf("Enter filename: ");
-    scanf("%s", fileName);
 
     file = fopen(fileName, "r");
 
     if (!file) {
         printf("Could not open file. Exiting...\n");
-        exit(101);
+        exit(1);
     }
 
     char initialTape[MAX_TAPE_LENGTH];
     fgets(initialTape, sizeof(initialTape), file);
-// initialTape[strlen(initialTape) - 1] = '\0'; // Remove newline character
+    initialTape[strlen(initialTape) - 1] = '\0'; // Remove newline character
 
-// Initialize the tape with the leftmost cell containing 'A'
+    // Initialize the tape with the leftmost cell containing 'A'
     struct Cell* tapeStart = createCell('A');
     struct Cell* head = tapeStart;
 
-// Read and parse the input file
+    // Read and parse the input file
     int numStates, startState, endState;
     fscanf(file, "%d", &numStates);
     fscanf(file, "%d", &startState);
     fscanf(file, "%d", &endState);
 
-// Read and populate the transition table
+    // declare transition struct
     struct Instruction transitionTable[MAX_STATES][ASCII_RANGE];
-
-    for (int state = 0; state < MAX_STATES; state++) {
-        for (int symbol = 0; symbol < ASCII_RANGE; symbol++) {
-            transitionTable[state][symbol].writeSymbol = 'B';
-            transitionTable[state][symbol].moveDirection = 'L';
-            transitionTable[state][symbol].nextState = -1;
-        }
-    }
 
     char line[100];
     while (fgets(line, sizeof(line), file)) {
-
         int fromState, toState;
         char readVal, writeVal, moveDirection;
 
-        if (sscanf(line, "(%d,%c)->(%c,%c,%d)", &fromState, &readVal, &writeVal, &moveDirection, &toState) == EOF) {
+        if (sscanf(line, "(%d,%c)->(%c,%c,%d)", &fromState, &readVal, &writeVal, &moveDirection, &toState) != 5 || (fromState == 0 && toState == 0 && readVal == '\0' && writeVal == '\0' && moveDirection == '\0')) {
             break;
         }
 
-// Check if all values are either zero or NULL character
+        // Check if all values are either zero or NULL character
         if (fromState == 0 && toState == 0 && readVal == '\0' && writeVal == '\0' && moveDirection == '\0') {
             continue; // Skip this line and continue with the next iteration
         }
@@ -127,12 +116,12 @@ int main() {
         transitionTable[fromState][(int)readVal].writeSymbol = writeVal;
         transitionTable[fromState][(int)readVal].moveDirection = moveDirection;
         transitionTable[fromState][(int)readVal].nextState = toState;
+
     }
 
-    int currentState = startState;
     int tapeIndex = 0;
 
-// // Append initialTape to the tape
+    // Allocate cells on-the-fly for the input tape
     while (initialTape[tapeIndex] != '\0') {
         struct Cell* newCell = createCell(initialTape[tapeIndex]);
         head->next = newCell;
@@ -141,20 +130,42 @@ int main() {
         tapeIndex++;
     }
 
-    printf("Writing tape...\n");
+    if (head->value =='B') {
+        head->value = 'A';
+    }
+
     printf("Initial tape contents: ");
     printTape(tapeStart);
 
-    while (1) {
+    // Initialize the Turing machine tape
+    tm->tape = tapeStart;
 
-//        if (initialTape[tapeIndex] == '\0') {
-//            break;
+//     Check if all values are either zero or NULL character
+//        if (transitionTable->writeSymbol == '\0' && transitionTable[currentState][(int)readSymbol].moveDirection == '\0' && transitionTable[currentState][(int)readSymbol].nextState == 0) {
+//            continue; // Skip this line and continue with the next iteration
 //        }
+}
 
+void runTM(struct TuringMachine* tm) {
+    struct Cell* head = tm->tape;
+    int currentState = tm->startState;
+    int endState = tm->endState;
+    struct Instruction (*transitionTable)[ASCII_RANGE] = tm->transitions;
+
+    while (1) {
         char readSymbol = (head != NULL) ? head->value : 'B';
 
-        struct Instruction instruction = transitionTable[currentState][(int)readSymbol];
+        // Check if instruction values are  zero, NULL
+        if (transitionTable[currentState][(int)readSymbol].writeSymbol == '\0' && transitionTable[currentState][(int)readSymbol].moveDirection == '\0' && transitionTable[currentState][(int)readSymbol].nextState == 0) {
+            break; // Skip this line and continue with the next iteration
+        }
 
+        // Check if a transition is defined for the current state and read symbol
+        if (transitionTable[currentState][(int)readSymbol].nextState == endState) {
+            break; // Exit the loop if no transition is defined
+        }
+
+        struct Instruction instruction = transitionTable[currentState][(int)readSymbol];
 
         if (head != NULL) {
             head->value = instruction.writeSymbol;
@@ -167,32 +178,40 @@ int main() {
         }
 
         currentState = instruction.nextState;
-        tapeIndex++;
 
-        if (currentState == -1) {
+        if (currentState == endState || head == NULL) {
             break;
         }
     }
 
-    // Find the end of the tape
-    while (tapeStart->prev != NULL) {
-        tapeStart = tapeStart->prev;
-    }
+    struct Cell* printHead = tm->tape;
 
-
-// Print the final tape content
     printf("Final tape contents: ");
-    printTape(tapeStart);
+    printTape(printHead);
 
-// Clean up
-    fclose(file);
+}
 
-// Clean up tape memory
+void cleanUp(struct TuringMachine* tm) {
+    struct Cell* tapeStart = tm->tape;
     while (tapeStart != NULL) {
         struct Cell* temp = tapeStart;
         tapeStart = tapeStart->next;
         free(temp);
     }
+}
+
+int main() {
+    struct TuringMachine tm;
+    char fileName[100];
+
+    printf("Enter filename: ");
+    scanf("%s", fileName);
+
+    fillTuringMachine(&tm, fileName);
+
+    runTM(&tm);
+
+    cleanUp(&tm);
 
     return 0;
 }
