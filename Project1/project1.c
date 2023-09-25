@@ -71,8 +71,9 @@ void printTape(struct Cell* tapeHead) {
     printf("\n");
 }
 
-// fill in values in our instruction table
-void fillTuringMachine (struct TuringMachine* tm, const char* fileName) {
+// fill in values from input file & print initial tape contents
+struct TuringMachine fillTuringMachine (const char* fileName) {
+    struct TuringMachine tm;
     FILE* file;
 
     file = fopen(fileName, "r");
@@ -113,9 +114,18 @@ void fillTuringMachine (struct TuringMachine* tm, const char* fileName) {
             continue; // Skip this line and continue with the next iteration
         }
 
+        if (!(writeVal == '\0' && moveDirection == '\0' && toState == 0)) {
         transitionTable[fromState][(int)readVal].writeSymbol = writeVal;
         transitionTable[fromState][(int)readVal].moveDirection = moveDirection;
         transitionTable[fromState][(int)readVal].nextState = toState;
+        }
+
+//     Check if all values are either zero or NULL character
+//        if (transitionTable[fromState][(int)readVal].writeSymbol == '\0' &&
+//            transitionTable[fromState][(int)readVal].moveDirection == '\0' &&
+//            transitionTable[fromState][(int)readVal].nextState == 0) {
+//            continue; // Skip this line and continue with the next iteration
+//        }
 
     }
 
@@ -130,20 +140,14 @@ void fillTuringMachine (struct TuringMachine* tm, const char* fileName) {
         tapeIndex++;
     }
 
-    if (head->value =='B') {
-        head->value = 'A';
-    }
-
     printf("Initial tape contents: ");
     printTape(tapeStart);
 
     // Initialize the Turing machine tape
-    tm->tape = tapeStart;
+    tm.tape = tapeStart;
 
-//     Check if all values are either zero or NULL character
-//        if (transitionTable->writeSymbol == '\0' && transitionTable[currentState][(int)readSymbol].moveDirection == '\0' && transitionTable[currentState][(int)readSymbol].nextState == 0) {
-//            continue; // Skip this line and continue with the next iteration
-//        }
+    return tm;
+
 }
 
 void runTM(struct TuringMachine* tm) {
@@ -201,13 +205,12 @@ void cleanUp(struct TuringMachine* tm) {
 }
 
 int main() {
-    struct TuringMachine tm;
     char fileName[100];
 
     printf("Enter filename: ");
     scanf("%s", fileName);
 
-    fillTuringMachine(&tm, fileName);
+    struct TuringMachine tm = fillTuringMachine(fileName);
 
     runTM(&tm);
 
