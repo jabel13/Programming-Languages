@@ -116,7 +116,7 @@ struct TuringMachine fillTuringMachine (const char* fileName) {
         char readVal, writeVal, moveDirection;
 
         if (sscanf(line, "(%d,%c)->(%c,%c,%d)", &fromState, &readVal, &writeVal, &moveDirection, &toState) != 5 || (fromState == 0 && toState == 0 && readVal == '\0' && writeVal == '\0' && moveDirection == '\0')) {
-            break;
+            continue;
         }
 
         // Having a problem with the values that were being stored so
@@ -176,7 +176,7 @@ void runTM(struct TuringMachine* tm) {
     struct Instruction** transitions = tm->transitions;
 
 
-    // This is the main loop fro the Turing Machine
+    // This is the main loop from  Turing Machine
     while (currentState != endState && head != NULL) {
         // readSymbol determines the symbol read from the tape, which is used to look up instructions in the transition table
         char readSymbol = head->value;
