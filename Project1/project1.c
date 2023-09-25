@@ -137,12 +137,11 @@ struct TuringMachine createTM (const char* fileName) {
 
     fclose(file);
 
-    // to keep track of current position in the initial tape
-//    int tapeIndex = 0;
-
-    for (int tapeIndex = 0; initialTape[tapeIndex] != '\0'; tapeIndex++) {
+    // iterate through each character in initial tape
+    for (int i = 0; initialTape[i] != '\0'; i++) {
+        // malloc to dynamically allocate memory for each cell of initial tape
         struct Cell* newCell = (struct Cell*)malloc(sizeof(struct Cell));
-        newCell->value = initialTape[tapeIndex];
+        newCell->value = initialTape[i];
         newCell->next = NULL;
         newCell->prev = head;
         head->next = newCell;
