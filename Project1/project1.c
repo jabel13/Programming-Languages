@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Define the maximum number of states
-#define MAX_STATES 100
+// Define global variables
+#define MAX_STATES 50
 #define MAX_TAPE_LENGTH 100
 #define ASCII_RANGE 128
 
@@ -16,7 +16,7 @@ struct Cell {
 
 // Instruction structure
 struct Instruction {
-    char writeSymbol;
+    char write;
     char moveDirection;
     int nextState;
 };
@@ -71,24 +71,25 @@ void printTape(struct Cell* tapeHead) {
     printf("\n");
 }
 
-// fill in values from input file & print initial tape contents
-struct TuringMachine fillTuringMachine (const char* fileName) {
+// Get and store all values from the input file - print initial tape contents, return TM struct
+struct TuringMachine createTM (const char* fileName) {
     FILE* file;
 
     file = fopen(fileName, "r");
 
     if (!file) {
-        printf("Could not open file. Exiting...\n");
+        printf("Enter valid file. \n");
         exit(1);
     }
 
     struct TuringMachine tm;
 
+    // holds initial tape content
     char initialTape[MAX_TAPE_LENGTH];
     fgets(initialTape, sizeof(initialTape), file);
     initialTape[strlen(initialTape) - 1] = '\0'; // Remove newline character
 
-    // Initialize the tape with the leftmost cell containing 'A'
+    // Allocate memory for a new struct cell and store  in tapeStart
     struct Cell* tapeStart = (struct Cell*)malloc(sizeof(struct Cell));
     tapeStart->value = 'A';
     tapeStart->next = NULL;
@@ -102,9 +103,11 @@ struct TuringMachine fillTuringMachine (const char* fileName) {
     fscanf(file, "%d", &startState);
     fscanf(file, "%d", &endState);
 
-    // Allocate memory for the TM transitions
-    // It allocates memory for rows of instructions (One row per state, and for columns (ASCII characters)
-    tm.transitions = (struct Instruction**) malloc(MAX_STATES * sizeof(struct Instruction*)); // tm.transitions is a pointer that points to an array of pointers, which will point to a row of instructions
+    // Allocate memory for the TM transitions 2D array
+    // rows are instructions, columns are ASCII characters
+    // array of row pointers to rows of instructions
+    tm.transitions = (struct Instruction**) malloc(MAX_STATES * sizeof(struct Instruction*));
+    // Allocate memory for each row of instructions in the 2d array
     for (int i = 0; i < MAX_STATES; i++) {
         tm.transitions[i] = (struct Instruction*)malloc(ASCII_RANGE * sizeof(struct Instruction));
     }
@@ -115,52 +118,45 @@ struct TuringMachine fillTuringMachine (const char* fileName) {
         int fromState, toState;
         char readVal, writeVal, moveDirection;
 
-        if (sscanf(line, "(%d,%c)->(%c,%c,%d)", &fromState, &readVal, &writeVal, &moveDirection, &toState) != 5 || (fromState == 0 && toState == 0 && readVal == '\0' && writeVal == '\0' && moveDirection == '\0')) {
+        if (sscanf(line, "(%d,%c)->(%c,%c,%d)", &fromState, &readVal, &writeVal, &moveDirection, &toState) != 5) {
             continue;
         }
 
         // Having a problem with the values that were being stored so
         // Check if all values are either zero or NULL character
-        if (fromState == 0 && toState == 0 && readVal == '\0' && writeVal == '\0' && moveDirection == '\0') {
-            continue; // Skip this line and continue with the next iteration
-        }
+//        if (fromState == 0 && toState == 0 && readVal == '\0' && writeVal == '\0' && moveDirection == '\0') {
+//            continue;
+//        }
 
-        // Another issue with storing the instructions
-        // If these values are set to these variables - don't store them in thhe instructions
-        if (!(writeVal == '\0' && moveDirection == '\0' && toState == 0)) {
             // Store the transition in the 2D array
-            tm.transitions[fromState][(int)readVal].writeSymbol = writeVal;
+            tm.transitions[fromState][(int)readVal].write = writeVal;
             tm.transitions[fromState][(int)readVal].moveDirection = moveDirection;
             tm.transitions[fromState][(int)readVal].nextState = toState;
-        }
+
     }
 
     fclose(file);
 
     // to keep track of current position in the initial tape
-    int tapeIndex = 0;
+//    int tapeIndex = 0;
 
-    // Allocate cells on-the-fly for the input tape
-    while (initialTape[tapeIndex] != '\0') {
+    for (int tapeIndex = 0; initialTape[tapeIndex] != '\0'; tapeIndex++) {
         struct Cell* newCell = (struct Cell*)malloc(sizeof(struct Cell));
         newCell->value = initialTape[tapeIndex];
         newCell->next = NULL;
         newCell->prev = head;
         head->next = newCell;
         head = newCell;
-        tapeIndex++;
     }
+
 
     printf("Initial tape contents: ");
     printTape(tapeStart);
 
-    // Initialize the Turing machine tape
+    // fill our turing machine tape, startState and endState values
     tm.tape = tapeStart;
-
     tm.startState = startState;
     tm.endState = endState;
-
-
 
     return tm;
 
@@ -169,14 +165,14 @@ struct TuringMachine fillTuringMachine (const char* fileName) {
 void runTM(struct TuringMachine* tm) {
     // initialize tape head to beginning of the tape
     struct Cell* head = tm->tape;
-    // Get currentState & endState from the TM
+    // Get currentState & endState from TM
     int currentState = tm->startState;
     int endState = tm->endState;
-    // Get transition table
+    // initialize instructions - reference the transitions table
     struct Instruction** transitions = tm->transitions;
 
 
-    // This is the main loop from  Turing Machine
+    // This is the main loop for the Turing Machine
     while (currentState != endState && head != NULL) {
         // readSymbol determines the symbol read from the tape, which is used to look up instructions in the transition table
         char readSymbol = head->value;
@@ -184,27 +180,24 @@ void runTM(struct TuringMachine* tm) {
         // Grab the instruction for the current state and read symbol from the transition table
         struct Instruction instruction = transitions[currentState][(int)readSymbol];
 
-        if (!(instruction.writeSymbol == '\0' && instruction.moveDirection == '\0' && instruction.nextState == 0)) {
-            // update the tape cell with the symbol to write
-            if (head != NULL) {
-                head->value = instruction.writeSymbol;
-            }
+        // update the tape cell with the symbol to write
+        head->value = instruction.write;
 
-            //Move tape left  or right based on instruction
-            if (instruction.moveDirection == 'L') {
-                head = moveLeft(head);
-            } else if (instruction.moveDirection == 'R') {
-                head = moveRight(head);
-            }
-
-            // update current state to the next state
-            currentState = instruction.nextState;
-        } else {
+        //Move tape left  or right based on instruction
+        if (instruction.moveDirection == 'L') {
+            head = moveLeft(head);
+        } else if (instruction.moveDirection == 'R') {
+            head = moveRight(head);
+        }
+        else {
             break; // Halt TM when no valid transition is found
         }
+
+        // update current state to the next state
+        currentState = instruction.nextState;
     }
 
-
+    // print tape
     struct Cell* printHead = tm->tape;
 
     printf("Final tape contents: ");
@@ -212,11 +205,13 @@ void runTM(struct TuringMachine* tm) {
 }
 
 void cleanUp(struct TuringMachine* tm) {
+
+    // get reference to the start of the tape
     struct Cell* tapeStart = tm->tape;
     while (tapeStart != NULL) {
         struct Cell* temp = tapeStart;
         tapeStart = tapeStart->next;
-        free(temp);
+        free(temp); // free memory occupied by current cell
     }
 
     // Free the allocated memory for the transitions 2D array
@@ -232,7 +227,7 @@ int main() {
     printf("Enter filename: ");
     scanf("%s", fileName);
 
-    struct TuringMachine tm = fillTuringMachine(fileName);
+    struct TuringMachine tm = createTM(fileName);
 
     runTM(&tm);
 
