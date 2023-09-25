@@ -128,10 +128,10 @@ struct TuringMachine createTM (const char* fileName) {
 //            continue;
 //        }
 
-            // Store the transition in the 2D array
-            tm.transitions[fromState][(int)readVal].write = writeVal;
-            tm.transitions[fromState][(int)readVal].moveDirection = moveDirection;
-            tm.transitions[fromState][(int)readVal].nextState = toState;
+        // Store the transition in the 2D array
+        tm.transitions[fromState][(int)readVal].write = writeVal;
+        tm.transitions[fromState][(int)readVal].moveDirection = moveDirection;
+        tm.transitions[fromState][(int)readVal].nextState = toState;
 
     }
 
