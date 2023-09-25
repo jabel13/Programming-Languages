@@ -22,11 +22,10 @@ struct Instruction {
 };
 
 struct TuringMachine {
-    struct Cell* tape;
-    int startState;
-    int endState;
-    // 2D array to represent instructions
-    struct Instruction** transitions;
+    struct Cell* tape; // Pointer to the tape
+    int startState; // Start state
+    int endState;   // End state
+    struct Instruction** transitions;   // 2D array to represent instructions
 };
 
 // Function to create a new tape cell with the given value as a parameter
@@ -103,9 +102,9 @@ struct TuringMachine fillTuringMachine (const char* fileName) {
     fscanf(file, "%d", &startState);
     fscanf(file, "%d", &endState);
 
-    // declare transition struct
-//    struct Instruction transitionTable[MAX_STATES][ASCII_RANGE];
-    tm.transitions = (struct Instruction**) malloc(MAX_STATES * sizeof(struct Instruction*));
+    // Allocate memory for the TM transitions
+    // It allocates memory for rows of instructions (One row per state, and for columns (ASCII characters)
+    tm.transitions = (struct Instruction**) malloc(MAX_STATES * sizeof(struct Instruction*)); // tm.transitions is a pointer that points to an array of pointers, which will point to a row of instructions
     for (int i = 0; i < MAX_STATES; i++) {
         tm.transitions[i] = (struct Instruction*)malloc(ASCII_RANGE * sizeof(struct Instruction));
     }
@@ -120,11 +119,14 @@ struct TuringMachine fillTuringMachine (const char* fileName) {
             break;
         }
 
+        // Having a problem with the values that were being stored so
         // Check if all values are either zero or NULL character
         if (fromState == 0 && toState == 0 && readVal == '\0' && writeVal == '\0' && moveDirection == '\0') {
             continue; // Skip this line and continue with the next iteration
         }
 
+        // Another issue with storing the instructions
+        // If these values are set to these variables - don't store them in thhe instructions
         if (!(writeVal == '\0' && moveDirection == '\0' && toState == 0)) {
             // Store the transition in the 2D array
             tm.transitions[fromState][(int)readVal].writeSymbol = writeVal;
@@ -135,6 +137,7 @@ struct TuringMachine fillTuringMachine (const char* fileName) {
 
     fclose(file);
 
+    // to keep track of current position in the initial tape
     int tapeIndex = 0;
 
     // Allocate cells on-the-fly for the input tape
@@ -153,40 +156,51 @@ struct TuringMachine fillTuringMachine (const char* fileName) {
 
     // Initialize the Turing machine tape
     tm.tape = tapeStart;
-    
+
     tm.startState = startState;
     tm.endState = endState;
+
+
 
     return tm;
 
 }
 
 void runTM(struct TuringMachine* tm) {
+    // initialize tape head to beginning of the tape
     struct Cell* head = tm->tape;
+    // Get currentState & endState from the TM
     int currentState = tm->startState;
     int endState = tm->endState;
+    // Get transition table
     struct Instruction** transitions = tm->transitions;
 
+
+    // This is the main loop fro the Turing Machine
     while (currentState != endState && head != NULL) {
-        // This determines the symbol read from the tape, which is used to look up instructions in the transition table
+        // readSymbol determines the symbol read from the tape, which is used to look up instructions in the transition table
         char readSymbol = head->value;
 
+        // Grab the instruction for the current state and read symbol from the transition table
         struct Instruction instruction = transitions[currentState][(int)readSymbol];
 
-        if (instruction.writeSymbol != '\0' && instruction.moveDirection != '\0' && instruction.nextState != 0) {
+        if (!(instruction.writeSymbol == '\0' && instruction.moveDirection == '\0' && instruction.nextState == 0)) {
+            // update the tape cell with the symbol to write
             if (head != NULL) {
                 head->value = instruction.writeSymbol;
             }
 
+            //Move tape left  or right based on instruction
             if (instruction.moveDirection == 'L') {
                 head = moveLeft(head);
             } else if (instruction.moveDirection == 'R') {
                 head = moveRight(head);
             }
 
+            // update current state to the next state
             currentState = instruction.nextState;
         } else {
-            break; // Halt when no valid transition is found
+            break; // Halt TM when no valid transition is found
         }
     }
 
