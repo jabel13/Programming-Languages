@@ -122,12 +122,6 @@ struct TuringMachine createTM (const char* fileName) {
             continue;
         }
 
-        // Having a problem with the values that were being stored so
-        // Check if all values are either zero or NULL character
-//        if (fromState == 0 && toState == 0 && readVal == '\0' && writeVal == '\0' && moveDirection == '\0') {
-//            continue;
-//        }
-
         // Store the transition in the 2D array
         tm.transitions[fromState][(int)readVal].write = writeVal;
         tm.transitions[fromState][(int)readVal].moveDirection = moveDirection;
