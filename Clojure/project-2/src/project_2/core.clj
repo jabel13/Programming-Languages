@@ -35,6 +35,7 @@
     ; If it's not a list return an empty set
     #{}))
 
+
 ;; (defn modus-ponens [if-prop kb] ...)
 
 ;; (defn modus-tollens [if-prop kb] ...)
@@ -48,7 +49,7 @@
 
 (defn -main
   [& args]
-  (println (and-elimination '(and a b)))
+  (println (and-elimination '(and a b))))
   ;; (println (not-elimination '(not x)))
   ;; (println (not-elimination '(not (not a)))))
 
