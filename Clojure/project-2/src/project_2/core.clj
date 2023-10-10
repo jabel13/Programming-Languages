@@ -3,28 +3,20 @@
   (:require [clojure.set :as set]))
 
 (defn not-elimination [not-prop]
-  ; Check if the proposition is a list
-  (if (and (list? not-prop)
-           ; Check if it starts with 'not'
-           (= 'not (first not-prop))
-           ; Check if the second item is also a list 
-           (list? (second not-prop))
-           ; Check if it starts with 'not'
-           (= 'not (first (second not-prop))))
-    ; If all conditions are met, return the the inner proposition
-    #{(second (second not-prop))}
-    ; If not, return empty set
-    #{}))
+  (when (and (seq? not-prop)
+             (= 'not (first not-prop))
+             (seq? (second not-prop))
+             (= 'not (first (second not-prop))))
+    #{(second (second not-prop))}))
+
 
 (defn and-elimination [and-prop]
-  ; Check if the proposition is a list
-  (if (and (list? and-prop)
-           ; Check if it starts with 'and'
-           (= 'and (first and-prop)))
-    ; If condition is met, return the two props joined by 'and' in a set
-    (set [(second and-prop) (nth and-prop 2)])
-    ; Otherwise return an empty set
-    #{}))
+  (cond
+    (and (list? and-prop) (= (first and-prop) 'and))
+    (let [[_ p q] and-prop] #{p q})
+    :else #{}))
+
+
 
 ; Modus ponens: If we have a proposition 'if p q' and we know 'p', infer 'q'
 (defn modus-ponens [if-prop kb]
