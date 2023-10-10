@@ -3,19 +3,27 @@
   (:require [clojure.set :as set]))
 
 (defn not-elimination [not-prop]
+  ; Check if the following conditions are met:
+  ; not-prop is a sequence
+  ; The first element of not-prop is the symbol 'not'
+  ; The second element of not-prop is a sequence
+  ; The first element of the second element of not-prop is the symbol 'not'
   (when (and (seq? not-prop)
              (= 'not (first not-prop))
              (seq? (second not-prop))
              (= 'not (first (second not-prop))))
+    ; If the conditions are met, return a set containing 
+    ; the second element of the second element of not-prop.
     #{(second (second not-prop))}))
 
 
 (defn and-elimination [and-prop]
-  (cond
-    (and (list? and-prop) (= (first and-prop) 'and))
-    (let [[_ p q] and-prop] #{p q})
-    :else #{}))
-
+  ; Check if and-prop is a list, and its first element is the symbol 'and'
+  (if (and (list? and-prop) (= (first and-prop) 'and))
+    ; If the conditions are met, return a set containing the second and third elements of and-prop
+    #{(nth and-prop 1) (nth and-prop 2)}
+    ; Otherwise, return an empty set
+    #{}))
 
 
 ; Modus ponens: If we have a proposition 'if p q' and we know 'p', infer 'q'
