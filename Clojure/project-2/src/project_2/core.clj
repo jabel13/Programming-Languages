@@ -1,47 +1,96 @@
 (ns project-2.core
-  (:gen-class))
-
+  (:gen-class)
+  (:require [clojure.set :as set]))
 
 (defn not-elimination [not-prop]
-  ; Check if it's a list
-  (if (list? not-prop)
-    ; Check if it starts with 'not'
-    (if (= 'not (first not-prop))
-      ; Check if the second element is a list starting with 'not'
-      (if (list? (second not-prop))
-        ; If all conditions are met, return a singleton set
-        #{(second (second not-prop))}
-        ; If the second element is not a valid nested 'not', return an empty set
-        #{})
-      ; If it doesn't start with 'not', return an empty set
-      #{})
-    ; If it's not a list, return an empty set
+  ; Check if the proposition is a list
+  (if (and (list? not-prop)
+           ; Check if it starts with 'not'
+           (= 'not (first not-prop))
+           ; Check if the second item is also a list 
+           (list? (second not-prop))
+           ; Check if it starts with 'not'
+           (= 'not (first (second not-prop))))
+    ; If all conditions are met, return the the inner proposition
+    #{(second (second not-prop))}
+    ; If not, return empty set
     #{}))
-
 
 (defn and-elimination [and-prop]
+  ; Check if the proposition is a list
   (if (and (list? and-prop)
+           ; Check if it starts with 'and'
            (= 'and (first and-prop)))
-    #{(second and-prop) (nth and-prop 2)}
+    ; If condition is met, return the two props joined by 'and' in a set
+    (set [(second and-prop) (nth and-prop 2)])
+    ; Otherwise return an empty set
     #{}))
 
+; Modus ponens: If we have a proposition 'if p q' and we know 'p', infer 'q'
+(defn modus-ponens [if-prop kb]
+    ; Check if the proposition is of the form 'if p q' and 'p' is known
+  (if (and (list? if-prop)
+           (= 'if (first if-prop))
+           (contains? kb (second if-prop)))
+    ; return q
+    #{(nth if-prop 2)}
+    ; if not, return an empty set
+    #{}))
 
+; Modus tollens: If we have a proposition 'if p q' and we know 'not q', infer 'not p'
+(defn modus-tollens [if-prop kb]
+  ; Check if the proposition is of the form 'if p q' and 'not q' is known
+  (if (and (list? if-prop)
+           (= 'if (first if-prop))
+           (contains? kb (list 'not (nth if-prop 2))))
+    ; return 'not p'
+    #{(list 'not (second if-prop))}
+    ; If not, return empty step
+    #{}))
 
+(defn elim-step [prop kb]
+  ; determine all possible inferences using each elimination rule
+  (let [not-elim (not-elimination prop)
+        and-elim (and-elimination prop)
+        modus-p (modus-ponens prop kb)
+        modus-t (modus-tollens prop kb)]
+    ; Combine all infered propositions into a single set
+    (clojure.set/union not-elim and-elim modus-p modus-t)))
 
-;; (defn modus-ponens [if-prop kb] ...)
+; recursively infer new propositions until no new inferences can be made
+(defn fwd-infer [prop kb]
+  ; Add given proposition to the knowledge base
+  (let [new-kb (conj kb prop)]
+    ; Begin loop with initial kb, comparing it in each iteration to the updated version from the previous iteration
+    (loop [current-kb new-kb
+           previous-kb #{}]
+      ; If no new inferences have been made, return the current kb
+      (if (= current-kb previous-kb)
+        current-kb
+        ; Otherwise, apply elimination rules to each proposition in the knowledge base
+        (let [relevant-props (filter list? current-kb)
+              inferred-results (map #(elim-step % current-kb) relevant-props)]
+          ; Recur with the updated knowledge base and the current one as "previous"
+          (recur (reduce clojure.set/union current-kb inferred-results) current-kb))))))
 
-;; (defn modus-tollens [if-prop kb] ...)
-
-;; (defn elim-step
-;;   "One step of the elimination inference procedure."
-;;   [prop kb]
-;;   ...)
-
-;; (defn fwd-infer [prop kb] ...)
+;; (defn print-inference [result-map prop]
+;;   (let [derived (result-map :results)
+;;         reasons (result-map :reasons)]
+;;     (println "Because:" (last (first reasons)))
+;;     (println "and:" prop)
+;;     (doseq [r (rest (first reasons))]
+;;       (println "I derived:" r)
+;;       (println (second reasons))
+;;       (println))
+;;     (println "=> " derived)
+;;     (println "--------------------------------")))
 
 (defn -main
   [& args]
-  (println (and-elimination '(and a b))))
-  ;; (println (not-elimination '(not x)))
-  ;; (println (not-elimination '(not (not a)))))
+  (println (fwd-infer '(if a b) '#{(not b)})) ; Expected: #{(if a b) (not a) (not b)} 
+  (println (fwd-infer 'a '#{(if a b) (if b c)})) ; Expected: #{(if a b) a c (if b c) b}
+  (println (fwd-infer '(and (not (not (if a b))) a) '#{})) ; Expected: #{(if a b) (not (not (if a b))) a (and (not (not (if a b))) a) b}
+  )
+
+
 
