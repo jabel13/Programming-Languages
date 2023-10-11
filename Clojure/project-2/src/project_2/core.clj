@@ -1,6 +1,6 @@
 (ns project-2.core
   (:gen-class)
-  ; require, similar to 'import', 
+  ; require, similar to 'import'
   (:require [clojure.set :as set]))
 
 (defn not-elimination [not-prop]
@@ -45,9 +45,9 @@
 (defn modus-tollens [if-prop kb]
   ; Check if the proposition is a list
   (if (and (list? if-prop)
-           ; Check if the first element is the symbol 'if
+           ; check if the first element is the symbol 'if
            (= 'if (first if-prop))
-           ; Check if the negation ('not') of the third element of the if-prop is in the knowledge base
+           ; check if the negation ('not') of the third element of the if-prop is in the knowledge base
            (contains? kb (list 'not (nth if-prop 2))))
     ; return a set containing the negation of the second element of the if-prop
     #{(list 'not (second if-prop))}
@@ -57,7 +57,7 @@
 
 ; Determines the potential inferences, given a prop and kb
 (defn elim-step [prop kb]
-  ; define and store the results of elimination rules - use 'let' to bind results
+  ; Use 'let' to bind results
   ; Apply the not-elimination rule on the proposition and store the result in `not-elim`
   (let [not-elim (not-elimination prop)
         ; Apply the and-elimination rule on the proposition and store the result in `and-elim`
@@ -70,20 +70,24 @@
     (set/union not-elim and-elim modus-p modus-t)))
 
 
-; recursively infer new propositions until no new inferences can be made
+; Recursively infer new propositions until no new inferences can be made
 (defn fwd-infer [prop kb]
-  ; Add given proposition to the knowledge base
+  ; Initialize the knowledge base - the given prop is added (conjoined) to the kb to create 'new-kb' 
   (let [new-kb (conj kb prop)]
-    ; Begin loop with initial kb, comparing it in each iteration to the updated version from the previous iteration
+    ; Begin recursive loop with initial kb, current-kb is set to new-kb (the kb with added prop), previous-kb is set to an empty set
     (loop [current-kb new-kb
            previous-kb #{}]
-      ; If no new inferences have been made, return the current kb
+      ; Check for new inferences
+      ; If current-kb is the same as previous-kb, no new propsitions were infered in last iteration, function returns current state of kb
       (if (= current-kb previous-kb)
         current-kb
-        ; Otherwise, apply elimination rules to each proposition in the knowledge base
+        ; Only props that are lists are considered for inference
+        ; For each prop in current-kb, the elim-step function is applied to infer new propositions
+        ; 'map' function is used to apply elim step to each relevant proposition
         (let [relevant-props (filter list? current-kb)
               inferred-results (map #(elim-step % current-kb) relevant-props)]
-          ; Recur with the updated knowledge base and the current one as "previous"
+          ; Use reduce with the set/union to combine all new infered props with the the current kb
+          ; Then the loop recurs with the updated kb as current-kb, and the preivous current-kb becomes previous-kb
           (recur (reduce set/union current-kb inferred-results) current-kb))))))
 
 (defn -main
