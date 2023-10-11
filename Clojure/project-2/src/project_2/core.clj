@@ -6,16 +6,18 @@
 (defn not-elimination [not-prop]
   ; Check if the following conditions are met:
   ; not-prop is a sequence 
-  (when (and (seq? not-prop)
+  (if (and (seq? not-prop)
              ; The first element of not-prop is the symbol 'not'
-             (= 'not (first not-prop))
+           (= 'not (first not-prop))
              ; The second element of not-prop is a sequence
-             (seq? (second not-prop))
+           (seq? (second not-prop))
              ; The first element of the second element of not-prop is the symbol 'not'
-             (= 'not (first (second not-prop))))
+           (= 'not (first (second not-prop))))
     ; If the conditions are met, return a set containing 
     ; the second element of the second element of not-prop.
-    #{(second (second not-prop))}))
+    #{(second (second not-prop))}
+    ; If not, return an empty set
+    #{}))
 
 
 (defn and-elimination [and-prop]
@@ -69,7 +71,6 @@
     ; Combine all infered propositions from above, into a single set
     (set/union not-elim and-elim modus-p modus-t)))
 
-
 ; Recursively infer new propositions until no new inferences can be made
 (defn fwd-infer [prop kb]
   ; Initialize the knowledge base - the given prop is added (conjoined) to the kb to create 'new-kb' 
@@ -92,6 +93,25 @@
 
 (defn -main
   [& args]
+  ;; (println (not-elimination '(not x)))
+  ;; (println (not-elimination '(not (not a))))
+
+  ;; (println (and-elimination '(and a b)))
+
+  ;; (println (modus-ponens '(if p q) #{'p})) ; Should print #{q}
+  ;; (println (modus-tollens '(if p q) '#{(not q)})) ; Should print #{(not p)}
+
+  ;; (println (elim-step '(and p q) #{}))
+  ;; (println (elim-step '(not (not p)) #{}))
+  ;; (println (elim-step '(if p q) #{'(not q)}))
+  ;; (println (elim-step '(if p q) #{'p}))
+
+  ;; (println (fwd-infer '(not (not A)) #{})) ; Should print #{A}
+  ;; (println (fwd-infer '(and A B) #{}))     ; Should print #{A B}
+
+  ;; (println (fwd-infer '(and A (not (not B))) #{})) ; Should print #{A B}
+
+
   (println (fwd-infer '(if a b) '#{(not b)})) ; Expected: #{(if a b) (not a) (not b)} 
   (println (fwd-infer 'a '#{(if a b) (if b c)})) ; Expected: #{(if a b) a c (if b c) b}
   (println (fwd-infer '(and (not (not (if a b))) a) '#{})) ; Expected: #{(if a b) (not (not (if a b))) a (and (not (not (if a b))) a) b}
