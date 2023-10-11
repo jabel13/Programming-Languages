@@ -1,5 +1,6 @@
 (ns project-2.core
   (:gen-class)
+  ; require, similar to 'import', 
   (:require [clojure.set :as set]))
 
 (defn not-elimination [not-prop]
@@ -66,7 +67,7 @@
         ; Apply modus-ponus using the prop and kb, then store the result
         modus-t (modus-tollens prop kb)]
     ; Combine all infered propositions from above, into a single set
-    (clojure.set/union not-elim and-elim modus-p modus-t)))
+    (set/union not-elim and-elim modus-p modus-t)))
 
 
 ; recursively infer new propositions until no new inferences can be made
@@ -83,7 +84,7 @@
         (let [relevant-props (filter list? current-kb)
               inferred-results (map #(elim-step % current-kb) relevant-props)]
           ; Recur with the updated knowledge base and the current one as "previous"
-          (recur (reduce clojure.set/union current-kb inferred-results) current-kb))))))
+          (recur (reduce set/union current-kb inferred-results) current-kb))))))
 
 (defn -main
   [& args]
