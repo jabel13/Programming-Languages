@@ -4,13 +4,13 @@
 
 (defn not-elimination [not-prop]
   ; Check if the following conditions are met:
-  ; not-prop is a sequence
-  ; The first element of not-prop is the symbol 'not'
-  ; The second element of not-prop is a sequence
-  ; The first element of the second element of not-prop is the symbol 'not'
+  ; not-prop is a sequence 
   (when (and (seq? not-prop)
+             ; The first element of not-prop is the symbol 'not'
              (= 'not (first not-prop))
+             ; The second element of not-prop is a sequence
              (seq? (second not-prop))
+             ; The first element of the second element of not-prop is the symbol 'not'
              (= 'not (first (second not-prop))))
     ; If the conditions are met, return a set containing 
     ; the second element of the second element of not-prop.
@@ -20,42 +20,54 @@
 (defn and-elimination [and-prop]
   ; Check if and-prop is a list, and its first element is the symbol 'and'
   (if (and (list? and-prop) (= (first and-prop) 'and))
-    ; If the conditions are met, return a set containing the second and third elements of and-prop
+    ; If they are, return a set containing the second and third elements of and-prop
     #{(nth and-prop 1) (nth and-prop 2)}
     ; Otherwise, return an empty set
     #{}))
 
 
-; Modus ponens: If we have a proposition 'if p q' and we know 'p', infer 'q'
+; A proposition 'if p q' and we know 'p', infer 'q'
 (defn modus-ponens [if-prop kb]
-    ; Check if the proposition is of the form 'if p q' and 'p' is known
+    ; Check if the proposition is a list 
   (if (and (list? if-prop)
+           ; Check if the first element is the symbol 'if
            (= 'if (first if-prop))
+           ; Check if the knowledge base contains the second element of if-prop
            (contains? kb (second if-prop)))
-    ; return q
+    ; return a set containing the third element of if-prop
     #{(nth if-prop 2)}
     ; if not, return an empty set
     #{}))
 
-; Modus tollens: If we have a proposition 'if p q' and we know 'not q', infer 'not p'
+
+; A proposition 'if p q' and we know 'not q', infer 'not p'
 (defn modus-tollens [if-prop kb]
-  ; Check if the proposition is of the form 'if p q' and 'not q' is known
+  ; Check if the proposition is a list
   (if (and (list? if-prop)
+           ; Check if the first element is the symbol 'if
            (= 'if (first if-prop))
+           ; Check if the negation ('not') of the third element of the if-prop is in the knowledge base
            (contains? kb (list 'not (nth if-prop 2))))
-    ; return 'not p'
+    ; return a set containing the negation of the second element of the if-prop
     #{(list 'not (second if-prop))}
-    ; If not, return empty step
+    ; If not, return empty set
     #{}))
 
+
+; Determines the potential inferences, given a prop and kb
 (defn elim-step [prop kb]
-  ; determine all possible inferences using each elimination rule
+  ; define and store the results of elimination rules - use 'let' to bind results
+  ; Apply the not-elimination rule on the proposition and store the result in `not-elim`
   (let [not-elim (not-elimination prop)
+        ; Apply the and-elimination rule on the proposition and store the result in `and-elim`
         and-elim (and-elimination prop)
+        ; Apply modus-ponus using the prop and kb, then store the result
         modus-p (modus-ponens prop kb)
+        ; Apply modus-ponus using the prop and kb, then store the result
         modus-t (modus-tollens prop kb)]
-    ; Combine all infered propositions into a single set
+    ; Combine all infered propositions from above, into a single set
     (clojure.set/union not-elim and-elim modus-p modus-t)))
+
 
 ; recursively infer new propositions until no new inferences can be made
 (defn fwd-infer [prop kb]
@@ -72,18 +84,6 @@
               inferred-results (map #(elim-step % current-kb) relevant-props)]
           ; Recur with the updated knowledge base and the current one as "previous"
           (recur (reduce clojure.set/union current-kb inferred-results) current-kb))))))
-
-;; (defn print-inference [result-map prop]
-;;   (let [derived (result-map :results)
-;;         reasons (result-map :reasons)]
-;;     (println "Because:" (last (first reasons)))
-;;     (println "and:" prop)
-;;     (doseq [r (rest (first reasons))]
-;;       (println "I derived:" r)
-;;       (println (second reasons))
-;;       (println))
-;;     (println "=> " derived)
-;;     (println "--------------------------------")))
 
 (defn -main
   [& args]
