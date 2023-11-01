@@ -1,3 +1,10 @@
+(* Parser for 
+    E  -: T '|' E | T
+    T  -: F T | F
+    F  -: A '?' | A
+    A  -: C | '(' E ')'
+    C  -: Alphanumeric characters plus '.' *)
+
 (* Scanner Types *)
 type token = Tok_Char of char
     | Tok_OR
@@ -12,6 +19,7 @@ type re = C of char
     | Optional of re
     | Alternation of re * re
 
+(* Scanner *)
 let scan str =
     let len = String.length str in
     let rec tokenize i =
@@ -27,99 +35,116 @@ let scan str =
     in
     tokenize 0
 
-
-
-
 let parse tokens =
-    (* This handles Alternation - '|' *)
+
+(* This handles Alternation - '|' *)
     let rec parse_E tokens =
+        (* t is the parsed AST node, rest are the tokens remaining *)
         let t, rest = parse_T tokens in
-        (* If the OR token is found, continue and construct an alternation node *)
         match rest with
+        (* If the next token is Tok_OR - the | operator*)
         | Tok_OR :: rest' -> 
+            (* Try to parse another 'E' production, after the '|' *)
             let e, final_tokens = parse_E rest' in
+            (* Construct an Alternation AST node and return it with any remaining tokens *)
             Alternation(t, e), final_tokens
+        (* If there is no '|' operator, return what's been parsed*)
         | _ -> t, rest
 
 (* This handles 'concat' nodes *)
     and parse_T tokens =
+        (* f is the parsed AST node, rest are tokens remaining *)
         let f, rest = parse_F tokens in
-    (* If next token is a word or an opening parenthesis, 
-       continue parsing and construct concat node*)
         match rest with
+        (* If the next token is a char, (, or an |,*)
         | (Tok_Char _  :: _) | (Tok_LPAREN :: _) | Tok_Q :: _ -> 
+            (* continue parsing another 'T' production *)
             let t, final_tokens = parse_T rest in
+            (* Construct a Concat AST node *)
             Concat(f, t), final_tokens
+        (* If not, just resturn what's been parsed so far *)
         | _ -> f, rest
 
-    (* Handles optional sequences - '?' (Tok_Q) *)
+(* Handles optional sequences - '?' (Tok_Q) *)
     and parse_F tokens =
+        (* Tries to parse an 'A' production first *)
         let a, rest = parse_A tokens in
         match rest with
+        (* If the next token is a question mark, construct Optional AST node *)
         | Tok_Q :: rest' -> Optional(a), rest'
+        (* Otherwise return what was parsed *)
         | _ -> a, rest
 
  (* Lowest level in the grammar, regex the parathesized expression *)
     and parse_A tokens =
         match tokens with
+        (* If the next token is an opening parenthesis *)
         | Tok_LPAREN :: rest -> 
+            (* Parse an 'E' production in the parentheses *)
             let e, next_tokens = parse_E rest in
             (match next_tokens with
+            (* there should be a closing parenthesis *)
             | Tok_RPAREN :: rest' -> e, rest'
+            (* throw error is parenthesis not found *)
             | _ -> failwith "Missing closing parenthesis")
+        (* If next token is a character, construct a 'C' AST node with that character *)
         | Tok_Char c :: rest -> C c, rest  
+        (* throw error for unexpected token *)
         | _ -> failwith "Unexpected token in parse_A"
 
+(* at the end of the parse function, start parsing with parse_E *)
+in
+let ast, _ = parse_E tokens in
+(* return the abstract syntax tree *)
+ast
 
-    in
-    let ast, _ = parse_E tokens in
-    ast
-
-    let rec match_from_position re str pos =
-        match re with
+(* Match at current position *)
+let rec matcher re str pos =
+    match re with
         | C '.' ->  (* Handling the dot character *)
             if pos < String.length str then
-                Some (pos + 1)
-            else None
+                pos + 1
+            else 
+                -1
         | C c -> 
             if pos < String.length str && str.[pos] = c then
-                Some (pos + 1)
-            else None
+                pos + 1
+            else 
+                -1
         | Concat(a, b) -> 
-            (match match_from_position a str pos with
-             | Some next_pos -> match_from_position b str next_pos
-             | None -> None)
+            let next_pos = matcher a str pos in
+            if next_pos <> -1 then 
+                matcher b str next_pos
+            else 
+                -1
         | Optional a -> 
-            (match match_from_position a str pos with
-            | Some next_pos -> Some next_pos
-            | None -> Some pos)
+            let next_pos = matcher a str pos in
+            if next_pos <> -1 then 
+                next_pos
+            else 
+                pos
         | Alternation(a, b) -> 
-            (match match_from_position a str pos with
-            | Some next_pos -> Some next_pos
-            | None -> match_from_position b str pos)
+            let next_pos_a = matcher a str pos in
+            if next_pos_a <> -1 then 
+                next_pos_a
+            else 
+                matcher b str pos
 
-
-let check_pattern re str =
-    match match_from_position re str 0 with
-    | Some pos when pos = String.length str -> true
-    | _ -> false
 
 let main () =
-    print_endline "Welcome to the regex matcher!";
     let rec loop () =
         print_string "pattern? ";
         flush stdout; (* Ensure that the output is displayed immediately *)
         let pattern = input_line stdin in
         let tokens = scan pattern in
         let ast = parse tokens in
-        (* print_endline (pretty_print ast);   *)
         let rec match_strings () =
             print_string "string? ";
-            flush stdout; (* Ensure that the output is displayed immediately *)
+            flush stdout;
             let str = input_line stdin in
             if str = "" then loop ()
             else begin
-                if check_pattern ast str then print_endline "match"
+                if (matcher ast str 0) = String.length str then print_endline "match"
                 else print_endline "no match";
                 match_strings ()
             end
@@ -131,3 +156,9 @@ let main () =
 
 
 let _ = main ()
+
+
+(* Test cases
+   ((h|j)ell. worl?d)|(42)
+   I (like|love|hate)( (cat|dog))?
+   *)
