@@ -50,7 +50,7 @@ let parse tokens =
             Alternation(t, e), final_tokens
         (* If there is no '|' operator, return what's been parsed*)
         | _ -> t, rest
-
+        
 (* This handles 'concat' nodes *)
     and parse_T tokens =
         (* f is the parsed AST node, rest are tokens remaining *)
@@ -98,10 +98,11 @@ let ast, _ = parse_E tokens in
 (* return the abstract syntax tree *)
 ast
 
-(* Match at current position *)
-let rec matcher re str pos =
-    match re with
-        | C '.' ->  (* Handling the dot character *)
+
+let rec matcher regex str pos =
+    (* pattern matching on the regex, decide what action to take based on the structure *)
+    match regex with
+        | C '.' -> 
             if pos < String.length str then
                 pos + 1
             else 
@@ -111,43 +112,47 @@ let rec matcher re str pos =
                 pos + 1
             else 
                 -1
-        | Concat(a, b) -> 
-            let next_pos = matcher a str pos in
+        | Concat(e1, e2) -> 
+            let next_pos = matcher e1 str pos in
             if next_pos <> -1 then 
-                matcher b str next_pos
+                matcher e2 str next_pos
             else 
                 -1
-        | Optional a -> 
-            let next_pos = matcher a str pos in
+        | Optional e -> 
+            let next_pos = matcher e str pos in
             if next_pos <> -1 then 
                 next_pos
+            (* Since 'e' is optional, return original position *)
             else 
                 pos
-        | Alternation(a, b) -> 
-            let next_pos_a = matcher a str pos in
+        | Alternation(e1, e2) -> 
+            let next_pos_a = matcher e1 str pos in
             if next_pos_a <> -1 then 
+                (*  return position after the matched sequence *)
                 next_pos_a
             else 
-                matcher b str pos
+                matcher e2 str pos
 
 
 let main () =
     let rec loop () =
         print_string "pattern? ";
-        flush stdout; (* Ensure that the output is displayed immediately *)
-        let pattern = input_line stdin in
-        let tokens = scan pattern in
+        flush stdout; (* flushes the standard output buffer *)
+        let pattern = input_line stdin in   (* read input until newline character*)
+        let tokens = scan pattern in    
         let ast = parse tokens in
         let rec match_strings () =
             print_string "string? ";
             flush stdout;
             let str = input_line stdin in
-            if str = "" then loop ()
-            else begin
-                if (matcher ast str 0) = String.length str then print_endline "match"
-                else print_endline "no match";
+            if str = "" then 
+                loop ()    (* if empty go back to the outer loop, ask for pattern *)
+            else
+                if (matcher ast str 0) = String.length str then 
+                    print_endline "match"
+                else 
+                    print_endline "no match";
                 match_strings ()
-            end
         in
         match_strings ()
     in
@@ -160,5 +165,5 @@ let _ = main ()
 
 (* Test cases
    ((h|j)ell. worl?d)|(42)
-   I (like|love|hate)( (cat|dog))?
+   I (like|love|hate)( (cat|dog))? people
    *)
