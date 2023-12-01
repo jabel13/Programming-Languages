@@ -4,7 +4,7 @@ distance(X1, Y1, X2, Y2, D) :- cell(X1, Y1), p(X2, Y2), D = ((X2 - X1)**2) + ((Y
 
 { neighbor(X1, Y1, X2, Y2) } :- cell(X1, Y1), X2 = X1 - 1, Y2 = Y1, X1 > 0.
 { neighbor(X1, Y1, X2, Y2) } :- cell(X1, Y1), X2 = X1 + 1, Y2 = Y1, X1 < n1 - 1.
-{ neighbor(X1, Y1, X2, Y2) }:- cell(X1, Y1), X2 = X1, Y2 = Y1 + 1, Y1 < n1 - 1.
+{ neighbor(X1, Y1, X2, Y2) } :- cell(X1, Y1), X2 = X1, Y2 = Y1 + 1, Y1 < n1 - 1.
 
 { good_neighbor(X1, Y1) } :- cell(X1, Y1), p(X2, Y2), distance(X1, Y1, X2, Y2, D), D >= d.
 
@@ -21,7 +21,7 @@ distance(X1, Y1, X2, Y2, D) :- cell(X1, Y1), p(X2, Y2), D = ((X2 - X1)**2) + ((Y
 { path(X1, Y1, X2, Y2) } :- path(_, _, X1, Y1), edge(X1, Y1, X2, Y2).
 
 % Constraints
-:- not path(startX, 0, _, _).
+% :- not path(startX, startY, _, _).
 :- edge(X1, Y1, X2, Y2), edge(X2, Y2, X1, Y1).
 :- edge(X1, Y1, X2, Y2), edge(X1, Y1, X3, Y3), X2 != X3, Y2 != Y3.
 :- not path(_, _, _, n1-1).
